@@ -1,0 +1,45 @@
+:root {
+  --ink: #0b1e33;
+  --ink-deep: #071523;
+  --line: #2c4a66;
+  --line-soft: #1a3450;
+  --paper: #eaf6ff;
+  --paper-dim: #b9d3e6;
+  --signal: #e8a33d;
+  --signal-deep: #c9821f;
+  --ok: #6fcf97;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink-deep);
+  color: var(--paper);
+  font-family: var(--font-body);
+}
+
+body {
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center top;
+  min-height: 100vh;
+}
+
+button { font-family: inherit; }
+
+::selection {
+  background: var(--signal);
+  color: var(--ink-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
