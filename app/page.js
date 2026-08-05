@@ -1,41 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [jobs, setJobs] = useState([]);
 
   function addFiles(list) {
-    const images = Array.from(list || []).filter((file) => file.type.startsWith('image/'));
+    const images = Array.from(list || [])
+      .filter((file) => file.type.startsWith('image/'))
+      .map((file) => ({ file, preview: URL.createObjectURL(file) }));
     setFiles((current) => [...current, ...images].slice(0, 20));
     setMessage('');
   }
 
   function removeFile(index) {
-    setFiles((current) => current.filter((_, i) => i !== index));
+    setFiles((current) => {
+      const item = current[index];
+      if (item?.preview) URL.revokeObjectURL(item.preview);
+      return current.filter((_, i) => i !== index);
+    });
+  }
+
+  function clearFiles() {
+    files.forEach((item) => item.preview && URL.revokeObjectURL(item.preview));
+    setFiles([]);
+    setJobs([]);
+    setMessage('');
   }
 
   async function generate() {
     if (!files.length) return;
     setBusy(true);
-    setMessage('Valmistellaan kuvia...');
+    setJobs([]);
+    setMessage('Ladataan kuvia ja käynnistetään AI-videot…');
 
     try {
       const payload = new FormData();
-      files.forEach((file) => payload.append('images', file));
+      files.forEach(({ file }) => payload.append('images', file));
       const response = await fetch('/api/generate', { method: 'POST', body: payload });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Generointi epäonnistui.');
-      setMessage(data.message || 'Generointi käynnistetty.');
+
+      setJobs(data.jobs.map((job) => ({ ...job, status: 'IN_QUEUE', videoUrl: null })));
+      setMessage('Videot ovat jonossa. Generointi voi kestää hetken.');
     } catch (error) {
       setMessage(error.message);
     } finally {
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (!jobs.length || !jobs.some((job) => !['COMPLETED', 'FAILED'].includes(job.status))) return;
+
+    const timer = setInterval(async () => {
+      setJobs((current) => {
+        current.forEach(async (job, index) => {
+          if (['COMPLETED', 'FAILED'].includes(job.status)) return;
+          try {
+            const response = await fetch(`/api/status?requestId=${encodeURIComponent(job.requestId)}`);
+            const data = await response.json();
+            setJobs((latest) => latest.map((item, i) => i === index ? { ...item, status: data.status, videoUrl: data.videoUrl || item.videoUrl } : item));
+          } catch {
+            // Keep polling if a temporary network error occurs.
+          }
+        });
+        return current;
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [jobs]);
 
   return (
     <main className="page">
@@ -54,7 +93,7 @@ export default function Home() {
         >
           <div className="uploadIcon">↑</div>
           <h2>Pudota kuvat tähän</h2>
-          <p>PNG, JPG tai WEBP · voit lisätä useita huoneita kerralla</p>
+          <p>PNG, JPG tai WEBP · enintään 20 kuvaa · 8 MB / kuva</p>
           <label className="button secondary">
             Valitse kuvat
             <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(event) => addFiles(event.target.files)} />
@@ -63,11 +102,11 @@ export default function Home() {
 
         {files.length > 0 && (
           <div className="files">
-            <div className="filesHeader"><strong>{files.length} kuvaa</strong><button onClick={() => setFiles([])}>Tyhjennä</button></div>
+            <div className="filesHeader"><strong>{files.length} kuvaa</strong><button onClick={clearFiles}>Tyhjennä</button></div>
             <div className="grid">
-              {files.map((file, index) => (
+              {files.map(({ file, preview }, index) => (
                 <div className="thumb" key={`${file.name}-${index}`}>
-                  <img src={URL.createObjectURL(file)} alt={file.name} />
+                  <img src={preview} alt={file.name} />
                   <button aria-label="Poista kuva" onClick={() => removeFile(index)}>×</button>
                   <span>{index + 1}</span>
                 </div>
@@ -76,8 +115,27 @@ export default function Home() {
             <button className="button primary" disabled={busy} onClick={generate}>
               {busy ? 'Käsitellään…' : 'Luo videot →'}
             </button>
-            {message && <p className="message">{message}</p>}
           </div>
+        )}
+
+        {message && <p className="message">{message}</p>}
+
+        {jobs.length > 0 && (
+          <section className="results">
+            <h2>Videot</h2>
+            <div className="resultsGrid">
+              {jobs.map((job) => (
+                <article className="result" key={job.requestId}>
+                  <div className="resultTop">
+                    <strong>{job.name}</strong>
+                    <span className={job.status === 'COMPLETED' ? 'done' : ''}>{job.status === 'IN_QUEUE' ? 'Jonossa' : job.status === 'IN_PROGRESS' ? 'Generoi…' : job.status === 'COMPLETED' ? 'Valmis' : job.status}</span>
+                  </div>
+                  {job.videoUrl ? <video src={job.videoUrl} controls playsInline /> : <div className="videoPlaceholder">AI tekee videota…</div>}
+                  {job.videoUrl && <a className="download" href={job.videoUrl} target="_blank" rel="noreferrer">Avaa video ↗</a>}
+                </article>
+              ))}
+            </div>
+          </section>
         )}
       </section>
 
@@ -97,7 +155,7 @@ export default function Home() {
         .dropzone { min-height: 360px; border: 1px dashed #45484f; border-radius: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 35px; text-align: center; transition: .2s; }
         .dropzone.dragging { border-color: #a9ff67; background: rgba(169,255,103,.05); transform: scale(.995); }
         .uploadIcon { width: 58px; height: 58px; border: 1px solid #373a40; border-radius: 50%; display: grid; place-items: center; font-size: 28px; color: #a9ff67; margin-bottom: 18px; }
-        h2 { margin: 0 0 8px; font-size: 25px; }
+        h2 { margin: 0 0 14px; font-size: 25px; }
         .dropzone p { color: #777b82; margin: 0 0 22px; }
         .button { border: 0; border-radius: 11px; padding: 14px 22px; cursor: pointer; font-weight: 700; transition: .2s; }
         .button.primary { width: 100%; margin-top: 20px; background: #a9ff67; color: #080a08; }
@@ -107,12 +165,21 @@ export default function Home() {
         .files { padding: 18px 6px 6px; }
         .filesHeader { display:flex; justify-content:space-between; margin-bottom: 14px; color:#d7d8da; }
         .filesHeader button { border:0; background:none; color:#888b91; cursor:pointer; }
-        .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+        .grid,.resultsGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
         .thumb { position:relative; aspect-ratio: 4/3; overflow:hidden; border-radius:11px; background:#202126; }
         .thumb img { width:100%; height:100%; object-fit:cover; }
         .thumb button { position:absolute; right:6px; top:6px; width:25px; height:25px; border:0; border-radius:50%; background:rgba(0,0,0,.7); color:#fff; cursor:pointer; }
         .thumb span { position:absolute; left:7px; bottom:7px; background:rgba(0,0,0,.65); border-radius:5px; padding:3px 6px; font-size:11px; }
         .message { text-align:center; color:#a9ff67; font-size:14px; }
+        .results { border-top:1px solid #292b30; margin-top:25px; padding:25px 6px 6px; }
+        .resultsGrid { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+        .result { background:#0c0d10; border:1px solid #292b30; border-radius:14px; padding:10px; overflow:hidden; }
+        .resultTop { display:flex; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:12px; color:#a2a5aa; }
+        .resultTop strong { color:#e5e6e8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .done { color:#a9ff67; }
+        .result video,.videoPlaceholder { width:100%; aspect-ratio:16/9; border-radius:9px; object-fit:cover; background:#17191d; }
+        .videoPlaceholder { display:grid; place-items:center; color:#777b82; font-size:13px; }
+        .download { display:block; color:#a9ff67; text-decoration:none; font-size:12px; margin:10px 2px 2px; }
         .footer { text-align:center; color:#55585e; font-size:12px; margin-top:25px; }
         @media(max-width:600px){ .page{padding-top:40px}.dropzone{min-height:300px;padding:20px} }
       `}</style>
