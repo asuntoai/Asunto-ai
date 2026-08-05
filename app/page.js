@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+const APP_VERSION = '2026-08-05-image-to-video-v3';
+
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
@@ -41,14 +43,14 @@ export default function Home() {
     try {
       const payload = new FormData();
       files.forEach(({ file }) => payload.append('images', file));
-      const response = await fetch('/api/generate', { method: 'POST', body: payload });
+      const response = await fetch('/api/generate', { method: 'POST', body: payload, cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Generointi epäonnistui.');
 
-      setJobs(data.jobs.map((job) => ({ ...job, status: 'IN_QUEUE', videoUrl: null })));
+      setJobs((data.jobs || []).map((job) => ({ ...job, status: 'IN_QUEUE', videoUrl: null })));
       setMessage('Videot ovat jonossa. Generointi voi kestää hetken.');
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error.message || 'Generointi epäonnistui.');
     } finally {
       setBusy(false);
     }
@@ -58,19 +60,20 @@ export default function Home() {
     if (!jobs.length || !jobs.some((job) => !['COMPLETED', 'FAILED'].includes(job.status))) return;
 
     const timer = setInterval(async () => {
-      setJobs((current) => {
-        current.forEach(async (job, index) => {
-          if (['COMPLETED', 'FAILED'].includes(job.status)) return;
-          try {
-            const response = await fetch(`/api/status?requestId=${encodeURIComponent(job.requestId)}`);
-            const data = await response.json();
-            setJobs((latest) => latest.map((item, i) => i === index ? { ...item, status: data.status, videoUrl: data.videoUrl || item.videoUrl } : item));
-          } catch {
-            // Keep polling if a temporary network error occurs.
-          }
-        });
-        return current;
-      });
+      const pendingJobs = jobs.filter((job) => !['COMPLETED', 'FAILED'].includes(job.status));
+      await Promise.all(pendingJobs.map(async (job) => {
+        try {
+          const response = await fetch(`/api/status?requestId=${encodeURIComponent(job.requestId)}`, { cache: 'no-store' });
+          const data = await response.json();
+          setJobs((current) => current.map((item) => item.requestId === job.requestId
+            ? { ...item, status: data.status || 'ERROR', videoUrl: data.videoUrl || item.videoUrl, error: data.error || null }
+            : item));
+        } catch (error) {
+          setJobs((current) => current.map((item) => item.requestId === job.requestId
+            ? { ...item, status: 'ERROR', error: error.message }
+            : item));
+        }
+      }));
     }, 5000);
 
     return () => clearInterval(timer);
@@ -79,7 +82,7 @@ export default function Home() {
   return (
     <main className="page">
       <section className="hero">
-        <div className="badge">ASUNTO AI · IMAGE TO VIDEO</div>
+        <div className="badge">ASUNTO AI · IMAGE TO VIDEO · V3</div>
         <h1>Muuta asuntokuvat<br /><span>eläväksi videoksi.</span></h1>
         <p>Pudota huonekuvat tähän. AI luo niistä luonnollisen kameraliikkeen sisältäviä videoklippejä.</p>
       </section>
@@ -130,7 +133,7 @@ export default function Home() {
                     <strong>{job.name}</strong>
                     <span className={job.status === 'COMPLETED' ? 'done' : ''}>{job.status === 'IN_QUEUE' ? 'Jonossa' : job.status === 'IN_PROGRESS' ? 'Generoi…' : job.status === 'COMPLETED' ? 'Valmis' : job.status}</span>
                   </div>
-                  {job.videoUrl ? <video src={job.videoUrl} controls playsInline /> : <div className="videoPlaceholder">AI tekee videota…</div>}
+                  {job.videoUrl ? <video src={job.videoUrl} controls playsInline /> : <div className="videoPlaceholder">{job.error || 'AI tekee videota…'}</div>}
                   {job.videoUrl && <a className="download" href={job.videoUrl} target="_blank" rel="noreferrer">Avaa video ↗</a>}
                 </article>
               ))}
@@ -139,7 +142,7 @@ export default function Home() {
         )}
       </section>
 
-      <p className="footer">Asunto AI · AI-powered real estate walkthroughs</p>
+      <p className="footer">Asunto AI · AI-powered real estate walkthroughs · {APP_VERSION}</p>
 
       <style jsx global>{`
         * { box-sizing: border-box; }
@@ -178,7 +181,7 @@ export default function Home() {
         .resultTop strong { color:#e5e6e8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .done { color:#a9ff67; }
         .result video,.videoPlaceholder { width:100%; aspect-ratio:16/9; border-radius:9px; object-fit:cover; background:#17191d; }
-        .videoPlaceholder { display:grid; place-items:center; color:#777b82; font-size:13px; }
+        .videoPlaceholder { display:grid; place-items:center; color:#777b82; font-size:13px; text-align:center; padding:12px; }
         .download { display:block; color:#a9ff67; text-decoration:none; font-size:12px; margin:10px 2px 2px; }
         .footer { text-align:center; color:#55585e; font-size:12px; margin-top:25px; }
         @media(max-width:600px){ .page{padding-top:40px}.dropzone{min-height:300px;padding:20px} }
