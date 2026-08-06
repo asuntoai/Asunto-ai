@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 const MODEL = 'fal-ai/kling-video/v3/standard/image-to-video';
 
-const DEFAULT_PROMPT = `Smooth, perfectly stabilized cinematic interior shot. Camera performs a very slow, steady dolly-in through the room, as if mounted on a professional motorized slider. Zero handheld shake, zero camera jitter, ultra-smooth constant-speed movement. The room, furniture, walls, architecture and lighting remain completely static — only the camera moves. No distortion, no warping, no morphing. Premium real estate cinematography, calm and controlled motion.`;
+const DEFAULT_PROMPT = `Premium real estate interior video. Keep the original room completely stable and photorealistic. Create a very subtle, slow cinematic camera movement: a gentle optical push-in combined with a tiny smooth lateral slide from left to right. The movement should feel like a professional motorized camera rig, not a person walking. Extremely smooth, constant and controlled motion. The camera stays level and at a constant height. Preserve the exact architecture, furniture, walls, windows, lighting, colors and proportions. Only the camera moves. Calm, elegant, polished real estate cinematography.`;
 
 async function createJob(image) {
   const buffer = Buffer.from(await image.arrayBuffer());
@@ -19,7 +19,7 @@ async function createJob(image) {
       start_image_url: imageUrl,
       duration: '5',
       generate_audio: false,
-      negative_prompt: `handheld, walking, footsteps, human movement, body movement, camera operator, camera shake, camera jitter, vibration, bobbing, bouncing, swaying, wobble, unstable camera, sudden movement, fast movement, acceleration, deceleration, pan, tilt, orbit, rotation, zoom, distortion, warping, morphing, flicker, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
+      negative_prompt: `walking, footsteps, handheld, human camera operator, body movement, camera shake, camera jitter, vibration, bobbing, bouncing, swaying, wobble, rocking, unstable camera, shaky camera, micro jitter, sudden movement, fast movement, acceleration, deceleration, speed changes, large camera movement, aggressive dolly, orbit, rotation, tilt, whip pan, dramatic pan, zoom out, distortion, warping, morphing, flicker, changing furniture, changing architecture, moving walls, new objects, people, text, blur, low quality`,
     },
   });
 
