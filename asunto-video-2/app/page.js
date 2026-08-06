@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const APP_VERSION = '2026-08-05-image-to-video-v3';
+const APP_VERSION = '2026-08-06-image-to-video-v4';
 
 export default function Home() {
   const [files, setFiles] = useState([]);
@@ -35,25 +35,61 @@ export default function Home() {
   }
 
   async function generate() {
-    if (!files.length) return;
+    if (!files.length || busy) return;
+
     setBusy(true);
     setJobs([]);
-    setMessage('Ladataan kuvia ja käynnistetään AI-videot…');
+    setMessage(`Käynnistetään ${files.length} videota…`);
 
-    try {
-      const payload = new FormData();
-      files.forEach(({ file }) => payload.append('images', file));
-      const response = await fetch('/api/generate', { method: 'POST', body: payload, cache: 'no-store' });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Generointi epäonnistui.');
+    // IMPORTANT: Send every image in its own HTTP request. Vercel serverless
+    // functions have a request-body limit, so sending 5–20 images in one
+    // multipart request can fail before /api/generate is even reached.
+    // Each request is independent, while fal.ai jobs still run in parallel.
+    const results = await Promise.all(
+      files.map(async ({ file }, index) => {
+        try {
+          const payload = new FormData();
+          payload.append('images', file, file.name);
 
-      setJobs((data.jobs || []).map((job) => ({ ...job, status: 'IN_QUEUE', videoUrl: null })));
-      setMessage('Videot ovat jonossa. Generointi voi kestää hetken.');
-    } catch (error) {
-      setMessage(error.message || 'Generointi epäonnistui.');
-    } finally {
-      setBusy(false);
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            body: payload,
+            cache: 'no-store',
+          });
+
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(data.error || `Kuvan ${index + 1} käsittely epäonnistui.`);
+          }
+
+          return { ok: true, jobs: data.jobs || [] };
+        } catch (error) {
+          return {
+            ok: false,
+            error: error?.message || `Kuvan ${index + 1} käsittely epäonnistui.`,
+          };
+        }
+      })
+    );
+
+    const successfulJobs = results.flatMap((result) => result.jobs || []);
+    const failures = results.filter((result) => !result.ok);
+
+    setJobs(successfulJobs.map((job) => ({
+      ...job,
+      status: 'IN_QUEUE',
+      videoUrl: null,
+    })));
+
+    if (failures.length === 0) {
+      setMessage(`${successfulJobs.length} videota käynnistetty. Generointi voi kestää hetken.`);
+    } else if (successfulJobs.length > 0) {
+      setMessage(`${successfulJobs.length} videota käynnistetty, ${failures.length} epäonnistui. Yritä epäonnistuneita kuvia uudelleen.`);
+    } else {
+      setMessage(failures[0]?.error || 'Videoiden käynnistys epäonnistui.');
     }
+
+    setBusy(false);
   }
 
   useEffect(() => {
@@ -82,7 +118,7 @@ export default function Home() {
   return (
     <main className="page">
       <section className="hero">
-        <div className="badge">ASUNTO AI · IMAGE TO VIDEO · V3</div>
+        <div className="badge">ASUNTO AI · IMAGE TO VIDEO · V4</div>
         <h1>Muuta asuntokuvat<br /><span>eläväksi videoksi.</span></h1>
         <p>Pudota huonekuvat tähän. AI luo niistä luonnollisen kameraliikkeen sisältäviä videoklippejä.</p>
       </section>
@@ -116,7 +152,7 @@ export default function Home() {
               ))}
             </div>
             <button className="button primary" disabled={busy} onClick={generate}>
-              {busy ? 'Käsitellään…' : 'Luo videot →'}
+              {busy ? 'Käynnistetään…' : 'Luo videot →'}
             </button>
           </div>
         )}
