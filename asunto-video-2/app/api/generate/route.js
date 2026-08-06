@@ -5,15 +5,15 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MODEL = 'fal-ai/kling-video/v3/standard/image-to-video';
-const DEFAULT_PROMPT = `Create a premium luxury real-estate listing video from this single interior photo.
-Use a perfectly stabilized professional cinema camera on a motorized dolly.
-The camera performs only a very slow, smooth, continuous forward glide through the scene, like a high-end property tour.
-The motion is gentle, elegant and effortless, with a constant speed and no visible physical camera movement.
-Keep the camera height, lens perspective and horizon completely stable throughout the shot.
-The room should feel calm, polished and professionally filmed for a luxury real-estate listing.
-Preserve the exact architecture, room geometry, furniture, windows, doors, materials, colors and proportions from the source image.
-Do not add, remove or transform objects. Keep straight lines straight and maintain stable geometry.
-Natural daylight, photorealistic, clean cinematic real-estate footage.`;
+
+const DEFAULT_PROMPT = `Create a premium luxury real-estate listing video from this single interior photograph.
+Treat the source image as a locked architectural reference and keep the composition exceptionally stable.
+Create a subtle, slow cinematic room reveal using only a very gentle stabilized camera drift, as if filmed on a professional motorized slider in a luxury property commercial.
+The camera movement must be extremely smooth, continuous and controlled, with no footsteps, no handheld feel and no visible shake.
+Very small movement only: gently reveal the depth and spatial relationship of the room while keeping the original framing and perspective stable.
+Keep the camera height and horizon level. Preserve the exact architecture, room geometry, furniture, windows, doors, materials, colors and proportions.
+Do not add, remove, replace, bend or morph objects. Keep vertical and horizontal lines straight and stable.
+Natural realistic daylight, photorealistic, premium real-estate cinematography, clean polished commercial footage.`;
 
 async function createJob(image) {
   const buffer = Buffer.from(await image.arrayBuffer());
@@ -26,7 +26,7 @@ async function createJob(image) {
       start_image_url: imageUrl,
       duration: '5',
       generate_audio: false,
-      negative_prompt: `handheld footage, handheld camera, human camera operator, walking movement, walking motion, footsteps, body movement, bobbing, bouncing, swaying, rocking, shaking, vibration, jitter, micro-jitter, wobble, unstable camera, camera shake, camera movement artifacts, sudden movement, acceleration, deceleration, speed changes, whip movement, fast movement, pan, tilt, orbit, rotation, zoom, lens breathing, rolling shutter, flicker, warping, morphing, geometry distortion, changing perspective, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
+      negative_prompt: `walking, walking camera, walking motion, footsteps, human movement, body movement, handheld, handheld footage, handheld camera, camera operator, shoulder camera, bobbing, bouncing, swaying, rocking, shaking, vibration, jitter, micro-jitter, wobble, camera shake, unstable camera, unstable footage, sudden movement, fast movement, rapid movement, acceleration, deceleration, speed changes, pan, tilt, orbit, rotation, zoom, whip movement, rolling shutter, lens breathing, flicker, warping, morphing, geometry distortion, perspective distortion, changing room layout, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
     },
   });
 
