@@ -9,11 +9,10 @@ const DEFAULT_PROMPT = 'Create a realistic luxury real-estate walkthrough from t
 
 export async function POST(request) {
   try {
-    if (!process.env.FAL_KEY) {
-      return NextResponse.json({ error: 'FAL_KEY puuttuu Vercelin ympäristömuuttujista.' }, { status: 500 });
-    }
+    const key = process.env.FAL_KEY;
+    if (!key) return NextResponse.json({ error: 'FAL_KEY puuttuu Vercelin ympäristömuuttujista.' }, { status: 500 });
 
-    fal.config({ credentials: process.env.FAL_KEY });
+    fal.config({ credentials: key });
     const formData = await request.formData();
     const images = formData.getAll('images').filter((file) => file && typeof file.arrayBuffer === 'function');
 
@@ -28,21 +27,32 @@ export async function POST(request) {
         return NextResponse.json({ error: `${image.name || 'Kuva'} on liian suuri. Maksimi on 8 MB.` }, { status: 400 });
       }
 
-      const buffer = Buffer.from(await image.arrayBuffer());
-      const file = new File([buffer], image.name || 'room-image.jpg', { type: image.type || 'image/jpeg' });
-      const imageUrl = await fal.storage.upload(file);
+      // Pass the Web File directly to fal storage. This avoids reconstructing
+      // the upload as a Node File and is supported by @fal-ai/client.
+      let imageUrl;
+      try {
+        imageUrl = await fal.storage.upload(image);
+      } catch (error) {
+        console.error('fal storage upload error:', error);
+        return NextResponse.json({ error: `Kuvan lataus fal.aihin epäonnistui: ${error?.message || 'tuntematon virhe'}` }, { status: 502 });
+      }
 
-      const { request_id } = await fal.queue.submit(MODEL, {
-        input: {
-          prompt: DEFAULT_PROMPT,
-          start_image_url: imageUrl,
-          duration: '5',
-          generate_audio: false,
-          negative_prompt: 'warping, flicker, camera shake, distorted furniture, changing architecture, new objects, people, text, blur, low quality',
-        },
-      });
+      try {
+        const { request_id } = await fal.queue.submit(MODEL, {
+          input: {
+            prompt: DEFAULT_PROMPT,
+            start_image_url: imageUrl,
+            duration: '5',
+            generate_audio: false,
+            negative_prompt: 'warping, flicker, camera shake, distorted furniture, changing architecture, new objects, people, text, blur, low quality',
+          },
+        });
 
-      jobs.push({ requestId: request_id, name: image.name || 'room-image' });
+        jobs.push({ requestId: request_id, name: image.name || 'room-image' });
+      } catch (error) {
+        console.error('fal queue submit error:', error);
+        return NextResponse.json({ error: `Videon käynnistys fal.ai:ssa epäonnistui: ${error?.message || 'tuntematon virhe'}` }, { status: 502 });
+      }
     }
 
     if (!jobs.length) return NextResponse.json({ error: 'Yhtään kelvollista kuvatiedostoa ei löytynyt.' }, { status: 400 });
