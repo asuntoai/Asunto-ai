@@ -5,14 +5,15 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MODEL = 'fal-ai/kling-video/v3/standard/image-to-video';
-const DEFAULT_PROMPT = `Create a premium real-estate listing video from this single interior photo.
-The camera must behave like a professional motorized cinema dolly on a perfectly stabilized gimbal.
-Use an extremely slow, constant-speed, straight forward camera push-in only.
-No handheld movement. No walking movement. No bobbing. No sway. No shake. No vibration. No micro-jitter.
-No acceleration or deceleration. No sudden camera movement. Keep the horizon perfectly level and the camera height constant.
-The movement should be so smooth that it feels like a high-end luxury real-estate commercial filmed on a motion-control dolly.
-Preserve the exact room geometry, architecture, furniture, windows, doors, materials, colors and proportions.
-Do not invent, remove, bend or morph objects. Stable straight vertical lines. Natural realistic daylight. Photorealistic.`;
+const DEFAULT_PROMPT = `Create a premium luxury real-estate listing video from this single interior photo.
+Use a perfectly stabilized professional cinema camera on a motorized dolly.
+The camera performs only a very slow, smooth, continuous forward glide through the scene, like a high-end property tour.
+The motion is gentle, elegant and effortless, with a constant speed and no visible physical camera movement.
+Keep the camera height, lens perspective and horizon completely stable throughout the shot.
+The room should feel calm, polished and professionally filmed for a luxury real-estate listing.
+Preserve the exact architecture, room geometry, furniture, windows, doors, materials, colors and proportions from the source image.
+Do not add, remove or transform objects. Keep straight lines straight and maintain stable geometry.
+Natural daylight, photorealistic, clean cinematic real-estate footage.`;
 
 async function createJob(image) {
   const buffer = Buffer.from(await image.arrayBuffer());
@@ -25,7 +26,7 @@ async function createJob(image) {
       start_image_url: imageUrl,
       duration: '5',
       generate_audio: false,
-      negative_prompt: `handheld camera, handheld footage, camera shake, camera vibration, micro jitter, jitter, wobble, bobbing, swaying, walking camera, footsteps, rolling shutter, unstable camera, sudden movement, acceleration, deceleration, zoom, pan, tilt, orbit, rotation, parallax jump, warping, morphing, flicker, geometry distortion, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
+      negative_prompt: `handheld footage, handheld camera, human camera operator, walking movement, walking motion, footsteps, body movement, bobbing, bouncing, swaying, rocking, shaking, vibration, jitter, micro-jitter, wobble, unstable camera, camera shake, camera movement artifacts, sudden movement, acceleration, deceleration, speed changes, whip movement, fast movement, pan, tilt, orbit, rotation, zoom, lens breathing, rolling shutter, flicker, warping, morphing, geometry distortion, changing perspective, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
     },
   });
 
