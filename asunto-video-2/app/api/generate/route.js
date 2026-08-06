@@ -5,17 +5,14 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MODEL = 'fal-ai/kling-video/v3/standard/image-to-video';
-
-const DEFAULT_PROMPT = `Create a premium, photorealistic real-estate walkthrough from this exact interior photograph.
-Use an extremely smooth, stabilized professional cinema-camera movement: a slow, constant-speed dolly/push-in with gentle, controlled parallax.
-The camera must feel like it is mounted on a high-end motorized gimbal or dolly, NOT handheld.
-Movement should be continuous, fluid and steady from the first frame to the last, with no sudden acceleration, stops, bumps, micro-jitters, vibration, wobble or handheld shake.
-Keep the horizon level and the camera height stable. Use subtle natural depth and parallax while preserving the exact composition and perspective of the original room.
-Preserve the exact architecture, walls, ceilings, windows, doors, furniture, fixtures, materials, colors and room layout.
-Do not invent, remove, replace or move objects. Keep geometry rigid and consistent throughout the shot.
-Natural daylight, realistic exposure, premium real-estate cinematography, clean professional commercial quality, sharp details, stable image, no stylization.`;
-
-const NEGATIVE_PROMPT = `handheld camera, shaky camera, camera shake, camera vibration, jitter, micro-jitter, wobble, unstable camera, jerky movement, sudden movement, abrupt acceleration, abrupt deceleration, camera bounce, rolling shutter, warping, morphing, flicker, frame instability, geometry distortion, bending walls, moving furniture, changing architecture, duplicated objects, disappearing objects, new objects, people, text, blur, low quality, surreal motion`;
+const DEFAULT_PROMPT = `Create a premium real-estate listing video from this single interior photo.
+The camera must behave like a professional motorized cinema dolly on a perfectly stabilized gimbal.
+Use an extremely slow, constant-speed, straight forward camera push-in only.
+No handheld movement. No walking movement. No bobbing. No sway. No shake. No vibration. No micro-jitter.
+No acceleration or deceleration. No sudden camera movement. Keep the horizon perfectly level and the camera height constant.
+The movement should be so smooth that it feels like a high-end luxury real-estate commercial filmed on a motion-control dolly.
+Preserve the exact room geometry, architecture, furniture, windows, doors, materials, colors and proportions.
+Do not invent, remove, bend or morph objects. Stable straight vertical lines. Natural realistic daylight. Photorealistic.`;
 
 async function createJob(image) {
   const buffer = Buffer.from(await image.arrayBuffer());
@@ -28,7 +25,7 @@ async function createJob(image) {
       start_image_url: imageUrl,
       duration: '5',
       generate_audio: false,
-      negative_prompt: NEGATIVE_PROMPT,
+      negative_prompt: `handheld camera, handheld footage, camera shake, camera vibration, micro jitter, jitter, wobble, bobbing, swaying, walking camera, footsteps, rolling shutter, unstable camera, sudden movement, acceleration, deceleration, zoom, pan, tilt, orbit, rotation, parallax jump, warping, morphing, flicker, geometry distortion, changing furniture, changing architecture, new objects, people, text, blur, low quality`,
     },
   });
 
