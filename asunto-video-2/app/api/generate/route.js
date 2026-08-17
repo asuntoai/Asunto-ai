@@ -4,7 +4,7 @@ import { fal } from '@fal-ai/client';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODEL = 'fal-ai/bytedance/seedance-2.0/image-to-video';
+const MODEL = 'bytedance/seedance-2.0/image-to-video';
 const PROMPT = `Static real estate interior shot. The camera moves smoothly sideways from left to right on a perfectly straight motorized track. Extremely slow, constant-speed lateral movement only. No zoom, no push-in, no forward or backward movement, no rotation, no pan or tilt. Perfectly stabilized, level and steady camera. The room, architecture, furniture, windows and lighting remain completely static. Only the camera position changes. Premium real estate cinematography, clean and calm.`;
 
 async function createJob(image) {
@@ -12,19 +12,18 @@ async function createJob(image) {
   const file = new File([buffer], image.name || 'room-image.jpg', { type: image.type || 'image/jpeg' });
   const imageUrl = await fal.storage.upload(file);
 
-  const result = await fal.subscribe(MODEL, {
+  const { request_id } = await fal.queue.submit(MODEL, {
     input: {
       image_url: imageUrl,
       prompt: PROMPT,
-      duration: 5,
+      duration: '5',
+      resolution: '720p',
+      aspect_ratio: 'auto',
+      generate_audio: false,
     },
-    logs: false,
   });
 
-  const videoUrl = result?.data?.video?.url || result?.video?.url || null;
-  if (!videoUrl) throw new Error('Seedance ei palauttanut videota.');
-
-  return { requestId: `seedance-${Date.now()}-${Math.random().toString(36).slice(2)}`, name: image.name || 'room-image', videoUrl };
+  return { requestId: request_id, name: image.name || 'room-image' };
 }
 
 export async function POST(request) {
@@ -46,7 +45,7 @@ export async function POST(request) {
     const jobs = results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
     const failures = results.filter((r) => r.status === 'rejected');
 
-    if (!jobs.length) return NextResponse.json({ error: failures[0]?.reason?.message || 'Seedance-videon generointi epäonnistui.' }, { status: 500 });
+    if (!jobs.length) return NextResponse.json({ error: failures[0]?.reason?.message || 'Seedance-videon käynnistys epäonnistui.' }, { status: 500 });
     return NextResponse.json({ ok: true, jobs, failed: failures.length });
   } catch (error) {
     console.error('Seedance generation error:', error);
