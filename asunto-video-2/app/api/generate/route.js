@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 const MODEL = 'fal-ai/kling-video/v3/standard/image-to-video';
 
-const DEFAULT_PROMPT = `Premium real estate interior video. Keep the original room completely stable and photorealistic. Create a very subtle, slow cinematic camera movement: a gentle optical push-in combined with a tiny smooth lateral slide from left to right. The movement should feel like a professional motorized camera rig, not a person walking. Extremely smooth, constant and controlled motion. The camera stays level and at a constant height. Preserve the exact architecture, furniture, walls, windows, lighting, colors and proportions. Only the camera moves. Calm, elegant, polished real estate cinematography.`;
+const DEFAULT_PROMPT = `Premium real estate interior video. The camera is locked to a perfectly stabilized professional motorized slider. Move the camera very slowly and smoothly from left to right across the room. The movement is purely lateral and constant-speed. No forward movement, no zoom, no push-in, no pull-out. Keep the camera level, with constant height and stable perspective. The room, architecture, furniture, walls, windows, lighting and all objects remain completely static and unchanged. Only the camera translates gently sideways. Calm, elegant, polished real estate cinematography.`;
 
 async function createJob(image) {
   const buffer = Buffer.from(await image.arrayBuffer());
@@ -19,7 +19,7 @@ async function createJob(image) {
       start_image_url: imageUrl,
       duration: '5',
       generate_audio: false,
-      negative_prompt: `walking, footsteps, handheld, human camera operator, body movement, camera shake, camera jitter, vibration, bobbing, bouncing, swaying, wobble, rocking, unstable camera, shaky camera, micro jitter, sudden movement, fast movement, acceleration, deceleration, speed changes, large camera movement, aggressive dolly, orbit, rotation, tilt, whip pan, dramatic pan, zoom out, distortion, warping, morphing, flicker, changing furniture, changing architecture, moving walls, new objects, people, text, blur, low quality`,
+      negative_prompt: `zoom, zoom in, zoom out, dolly in, dolly out, forward movement, backward movement, walking, footsteps, handheld, human camera operator, body movement, camera shake, camera jitter, vibration, bobbing, bouncing, swaying, wobble, rocking, unstable camera, shaky camera, micro jitter, sudden movement, fast movement, acceleration, deceleration, speed changes, large camera movement, aggressive camera movement, pan, tilt, orbit, rotation, whip pan, dramatic pan, distortion, warping, morphing, flicker, changing furniture, changing architecture, moving walls, new objects, people, text, blur, low quality`,
     },
   });
 
